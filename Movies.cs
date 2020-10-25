@@ -7,6 +7,8 @@ namespace ElasticSearch
     /// </summary>
     public class Movies
     {
+        #region Public Variables
+
         // The movie ID.
         public int movieId { get; set; }
         
@@ -16,6 +18,10 @@ namespace ElasticSearch
         // The list of genres.
         public List<string> genres { get; set; }
 
+        #endregion
+
+        #region Constructors
+
         /// <summary>
         /// Basic constructor.
         /// </summary>
@@ -23,5 +29,7 @@ namespace ElasticSearch
         {
 
         }
+
+        #endregion
     }
 }

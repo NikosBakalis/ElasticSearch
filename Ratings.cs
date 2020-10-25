@@ -9,6 +9,7 @@ namespace ElasticSearch
     /// </summary>
     public class Ratings
     {
+        #region Public Variables
         // The user ID.
         public int userId { get; set; }
 
@@ -21,6 +22,10 @@ namespace ElasticSearch
         // The time-stamp.
         public string timestamp { get; set; }
 
+        #endregion
+
+        #region Constructors
+
         /// <summary>
         /// Basic constructor.
         /// </summary>
@@ -28,5 +33,7 @@ namespace ElasticSearch
         {
 
         }
+
+        #endregion
     }
 }
