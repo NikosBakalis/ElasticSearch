@@ -1,4 +1,8 @@
 ﻿using Nest;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ElasticSearch
@@ -67,9 +71,47 @@ namespace ElasticSearch
             // Searches all the data of a specific index.
             var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
 
+            // User types name of movie.
+            Console.WriteLine("Enter name of Movie: ");
+
+            // Create a string variable and get user input from the keyboard and store it in the variable.
+            string userMovieName = Console.ReadLine();
+
             // Searches all the data of a specific index matching a string.
-            var searchMovieStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query("(1995)"))).Index(moviesIndexName).Size(10000));
+            var searchMovieStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query(userMovieName))).Index(moviesIndexName).Size(10000));
             //var searchStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query("(1995)"))).Index("movies").Size(10000));
+
+            // User types user ID.
+            Console.WriteLine("Enter user ID: ");
+
+            // Create a string variable and get user input from the keyboard and store it in the variable.
+            string userUserId = Console.ReadLine();
+
+            // Joining the two tables of Elastic Search.
+            var searchUserIdStringResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(userUserId))).Index(ratingsIndexName).Size(10000));
+
+            // Creates a list of integers.
+            List<int> moviesIds = new List<int>();
+
+            // For each one of the responses...
+            foreach (var item in searchUserIdStringResponce.Documents)
+            {
+                // Adds the movie ID to the list.
+                moviesIds.Add(item.movieId);
+            }
+
+            // Creates a list of strings.
+            List<string> moviesNames = new List<string>();
+
+            // For each one of the responses...
+            foreach (var item in moviesIds)
+            {
+                // Searches all the data of a specific index matching an item.
+                var movieNamesByMovieIds = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId).Query(item.ToString()))).Index(moviesIndexName).Size(10000));
+
+                // TODO: Add only the title of the movies.
+                moviesNames.Add(movieNamesByMovieIds.ToString());
+            }
         }
     }
 }
