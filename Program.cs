@@ -81,6 +81,19 @@ namespace ElasticSearch
             var searchMovieStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query(userMovieName))).Index(moviesIndexName).Size(10000));
             //var searchStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query("(1995)"))).Index("movies").Size(10000));
 
+            // Creates a list of strings.
+            List<string> displayResponse = new List<string>();
+
+            // For each one of the responses...
+            foreach (var item in searchMovieStringResponce.Documents)
+            {
+                // Adds the movie title to the list.
+                displayResponse.Add(item.title);
+
+                // Display the result
+                Console.WriteLine(item.title);
+            }
+
             // User types user ID.
             Console.WriteLine("Enter user ID: ");
 
