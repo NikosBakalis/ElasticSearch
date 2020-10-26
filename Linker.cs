@@ -14,7 +14,7 @@ namespace ElasticSearch
         /// <summary>
         /// Transforms the .csv file data to movies class data.
         /// </summary>
-        /// <param name="csvPath"></param>
+        /// <param name="csvPath">The path of the movies.csv file</param>
         /// <returns>The list of the movies</returns>
         public static IEnumerable<Movies> CSVToMovies(string csvPath)
         {
@@ -67,7 +67,7 @@ namespace ElasticSearch
         /// <summary>
         /// Transforms the .csv file data to ratings class data.
         /// </summary>
-        /// <param name="csvPath"></param>
+        /// <param name="csvPath">The path of the ratings.csv file</param>
         /// <returns>The list of the ratings</returns>
         public static IEnumerable<Ratings> CSVToRatings(string csvPath)
         {
