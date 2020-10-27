@@ -104,7 +104,7 @@ namespace ElasticSearch
             var searchUserIdStringResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(userUserId))).Index(ratingsIndexName).Size(10000));
 
             // Creates a list of integers.
-            List<int> moviesIds = new List<int>();
+            List<float> moviesIds = new List<float>();
 
             // For each one of the responses...
             foreach (var item in searchUserIdStringResponce.Documents)
@@ -124,6 +124,69 @@ namespace ElasticSearch
 
                 // TODO: Add only the title of the movies.
                 moviesNames.Add(movieNamesByMovieIds.ToString());
+            }
+
+            // Creates a list of integers.
+            List<float> ratings = new List<float>();
+
+            // For each one of the responses...
+            foreach (var item in searchUserIdStringResponce.Documents)
+            {
+                // Adds the movie ID to the list.
+                ratings.Add(item.rating);
+            }
+
+            
+            // Creates a list of floats.
+            List<float> averageRatingsForAllMoviesOfAUser = new List<float>();
+            
+            // For each movie ID...
+            foreach (var item in moviesIds)
+            {
+                // Searches all the ratings of a specific movie ID.
+                var ratingsResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId).Query(item.ToString()))).Index(ratingsIndexName).Size(10000));
+
+                // Creates a list of floats.
+                List<float> userRatings = new List<float>();
+
+                // For each rating...
+                foreach (var rating in ratingsResponse.Documents)
+                {
+                    // Adds a rating to allRatings list.
+                    userRatings.Add(rating.rating);
+                }
+
+                // Gets the average value of all ratings of a movie.
+                var averageRatingForAMovieOfAUser = userRatings.Average();
+
+                // Adds the average rating to the list.
+                averageRatingsForAllMoviesOfAUser.Add(averageRatingForAMovieOfAUser);
+
+                // Prints average rating for a movie of a user.
+                //Console.WriteLine(averageRatingForAMovieOfAUser);
+
+                // Empty allRatings list.
+                userRatings.Clear();
+            }
+
+            // Creates a list that concatenates the three lists we created before.
+            var listOfMoviesRatingsAndAverageRatings = Enumerable.Range(0, moviesIds.Count).Select(i => new
+            {
+                moviesIds = moviesIds[i],
+                ratings = ratings[i],
+                averageRatingsForAllMoviesOfAUser = averageRatingsForAllMoviesOfAUser[i],
+            });
+
+            var sortedListOfMoviesRatingsAndAverageRatings = listOfMoviesRatingsAndAverageRatings.OrderByDescending(x => x.ratings).ThenByDescending (z => z.averageRatingsForAllMoviesOfAUser).ToList();
+
+            // Empty line.
+            Console.WriteLine();
+
+            // For each item in those three lists...
+            foreach (var item in sortedListOfMoviesRatingsAndAverageRatings)
+            {
+                // Prints the item.
+                Console.WriteLine(item);
             }
         }
     }
