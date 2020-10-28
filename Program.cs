@@ -47,6 +47,8 @@ namespace ElasticSearch
             // Calls the Elastic Search Client.
             var elasticSearchClient = new ElasticClient();
 
+            #region Execute Once
+
             //  Creates the Elastic Search Client.
             //var movieResponse = await elasticSearchClient.Indices.CreateAsync(moviesIndexName);
 
@@ -64,6 +66,8 @@ namespace ElasticSearch
 
             // Indexes the Elastic Search Index.
             //var ratingIndexResponce = await elasticSearchClient.BulkAsync(x => x.Index(ratingsIndexName).IndexMany(csvToRatings));
+
+            #endregion
 
             // Searches all the data of a specific index.
             var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
