@@ -40,7 +40,7 @@ namespace ElasticSearch
                         title = line.Skip(1).Take(line.Length - 2).Aggregate((x, y) => x + "," + y),
 
                         // And some genres separated with this "|" character.
-                        genres = new List<string>(line[2].Split("|"))
+                        genres = new List<string>(line[^1].Split("|"))
                     });
                 }
                 // else...

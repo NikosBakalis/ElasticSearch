@@ -49,10 +49,10 @@ namespace ElasticSearch
 
             #region Execute Once
 
-            //  Creates the Elastic Search Client.
+            // Creates the Elastic Search Client.
             //var movieResponse = await elasticSearchClient.Indices.CreateAsync(moviesIndexName);
 
-            //  Creates the Elastic Search Client.
+            // Creates the Elastic Search Client.
             //var ratingResponse = await elasticSearchClient.Indices.CreateAsync(ratingsIndexName);
 
             // Deletes the elastic search Index.
@@ -191,6 +191,70 @@ namespace ElasticSearch
             {
                 // Prints the item.
                 Console.WriteLine(item);
+            }
+
+            // Gets all users.
+            var allUsersResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId))).Index(ratingsIndexName).Size(10000));
+
+            // Creates list of integers.
+            List<int> allDifferentUsersResponse = new List<int>();
+
+            // For each one user response...
+            foreach (var item in allUsersResponse.Documents)
+            {
+                // If there is not already in the list...
+                if (!allDifferentUsersResponse.Contains(item.userId))
+                {
+                    // Adds user to the list.
+                    allDifferentUsersResponse.Add(item.userId);
+                }
+            }
+
+            // Gets all movies.
+            var allMoviesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId))).Index(moviesIndexName).Size(10000));
+
+            // Creates list of integers.
+            List<int> allDifferentMoviesResponse = new List<int>();
+
+            // For each one movie response...
+            foreach (var item in allMoviesResponse.Documents)
+            {
+                // If there is not already in the list...
+                if (!allDifferentMoviesResponse.Contains(item.movieId))
+                {
+                    // Adds user to the list.
+                    allDifferentMoviesResponse.Add(item.movieId);
+                }
+            }
+
+            // Gets all categories.
+            var allCategoriesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.genres))).Index(moviesIndexName).Size(10000));
+
+            // Creates list of strings.
+            List<string> allDifferentCategoriesResponse = new List<string>();
+
+            // For each one categories response...
+            foreach (var item in allCategoriesResponse.Documents)
+            {
+                //allDifferentCategoriesResponse.Add(item.movieId);
+                // For each genre in genres...
+                foreach (var genre in item.genres)
+                {
+                    // If there is not already in the list...
+                    if (!allDifferentCategoriesResponse.Contains(genre))
+                    {
+                        // Adds genre to the list.
+                        allDifferentCategoriesResponse.Add(genre);
+                    }
+                }
+            }
+
+            // Gets all ratings.
+            var allRatingsResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
+
+            foreach (var item in allRatingsResponse.Documents)
+            {
+
             }
         }
     }
