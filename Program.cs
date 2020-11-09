@@ -70,10 +70,10 @@ namespace ElasticSearch
             #endregion
 
             // Searches all the data of a specific index.
-            var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
+            //var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
 
             // Searches all the data of a specific index.
-            var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
+            //var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
 
             // User types name of movie.
             Console.WriteLine("Enter name of Movie: ");
@@ -82,20 +82,29 @@ namespace ElasticSearch
             string userMovieName = Console.ReadLine();
 
             // Searches all the data of a specific index matching a string.
-            var searchMovieStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query(userMovieName))).Index(moviesIndexName).Size(10000));
-            //var searchStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.title).Query("(1995)"))).Index("movies").Size(10000));
+            var searchMovieStringResponce = await elasticSearchClient.SearchAsync<Movies>(x => x
+                                                                     .Query(y => y
+                                                                     .MoreLikeThis(z => z
+                                                                     .Fields(a => a
+                                                                     .Field(b => b.title))
+                                                                     .Like(c => c
+                                                                     .Text(userMovieName))
+                                                                     .MinTermFrequency(1)))
+                                                                     .Index(moviesIndexName)
+                                                                     .Size(10000));
 
-            // Creates a list of strings.
-            List<string> displayResponse = new List<string>();
-
-            // For each one of the responses...
-            foreach (var item in searchMovieStringResponce.Documents)
+            // If we get a result...
+            if (searchMovieStringResponce.Documents.Count != 0)
             {
-                // Adds the movie title to the list.
-                displayResponse.Add(item.title);
+                // Prints the response of the elastic search with user's keyword input.
+                Console.WriteLine(searchMovieStringResponce.Documents.Select(x => x.title).Aggregate((x, y) => x + "\n" + y));
+            }
 
-                // Display the result
-                Console.WriteLine(item.title);
+            // Else, the result is null...
+            else
+            {
+                // Prints the message below.
+                Console.WriteLine("Search of - " + userMovieName + " - returned zero results");
             }
 
             // User types user ID.
