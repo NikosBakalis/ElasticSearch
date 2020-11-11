@@ -70,7 +70,7 @@ namespace ElasticSearch
             #endregion
 
             // Searches all the data of a specific index.
-            //var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
+            var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
 
             // Searches all the data of a specific index.
             //var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
@@ -104,8 +104,11 @@ namespace ElasticSearch
             else
             {
                 // Prints the message below.
-                Console.WriteLine("Search of - " + userMovieName + " - returned zero results");
+                Console.WriteLine("Search of: - " + userMovieName + " - returned zero results");
             }
+            
+            // Empty line.
+            Console.WriteLine();
 
             // User types user ID.
             Console.WriteLine("Enter user ID: ");
@@ -148,7 +151,6 @@ namespace ElasticSearch
                 // Adds the movie ID to the list.
                 ratings.Add(item.rating);
             }
-
             
             // Creates a list of floats.
             List<float> averageRatingsForAllMoviesOfAUser = new List<float>();
@@ -192,8 +194,6 @@ namespace ElasticSearch
 
             var sortedListOfMoviesRatingsAndAverageRatings = listOfMoviesRatingsAndAverageRatings.OrderByDescending(x => x.ratings).ThenByDescending (z => z.averageRatingsForAllMoviesOfAUser).ToList();
 
-            // Empty line.
-            Console.WriteLine();
 
             // For each item in those three lists...
             foreach (var item in sortedListOfMoviesRatingsAndAverageRatings)
@@ -202,39 +202,17 @@ namespace ElasticSearch
                 Console.WriteLine(item);
             }
 
-            // Gets all users.
-            var allUsersResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId))).Index(ratingsIndexName).Size(10000));
+            // Gets all different users.
+            var allDifferentUsersResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Source(s => s.Includes(i => i.Field(f => f.userId))).Query(q => q.Match(m => m.Field(a => a.userId))).Collapse(c => c.Field(b => b.userId)).Index(ratingsIndexName).Size(10000));
 
-            // Creates list of integers.
-            List<int> allDifferentUsersResponse = new List<int>();
+            // Gets all different users to list.
+            var allDifferentUsersListResponse = allDifferentUsersResponse.Documents.Select(x => x.userId).ToList();
 
-            // For each one user response...
-            foreach (var item in allUsersResponse.Documents)
-            {
-                // If there is not already in the list...
-                if (!allDifferentUsersResponse.Contains(item.userId))
-                {
-                    // Adds user to the list.
-                    allDifferentUsersResponse.Add(item.userId);
-                }
-            }
+            // Gets all different movies.
+            var allDifferentMoviesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Source(s => s.Includes(i => i.Field(f => f.movieId))).Query(q => q.Match(m => m.Field(a => a.movieId))).Collapse(c => c.Field(b => b.movieId)).Index(moviesIndexName).Size(10000));
 
-            // Gets all movies.
-            var allMoviesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId))).Index(moviesIndexName).Size(10000));
-
-            // Creates list of integers.
-            List<int> allDifferentMoviesResponse = new List<int>();
-
-            // For each one movie response...
-            foreach (var item in allMoviesResponse.Documents)
-            {
-                // If there is not already in the list...
-                if (!allDifferentMoviesResponse.Contains(item.movieId))
-                {
-                    // Adds user to the list.
-                    allDifferentMoviesResponse.Add(item.movieId);
-                }
-            }
+            // Gets all different movies to list.
+            var allDifferentMoviesListResponse = allDifferentMoviesResponse.Documents.Select(x => x.movieId).ToList();
 
             // Gets all categories.
             var allCategoriesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.genres))).Index(moviesIndexName).Size(10000));
@@ -262,6 +240,11 @@ namespace ElasticSearch
             var allRatingsResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
 
             foreach (var item in allRatingsResponse.Documents)
+            {
+
+            }
+
+            foreach (var item in allDifferentCategoriesResponse)
             {
 
             }
