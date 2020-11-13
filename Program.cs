@@ -236,17 +236,60 @@ namespace ElasticSearch
                 }
             }
 
-            // Gets all ratings.
-            var allRatingsResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
+            //// Gets all ratings.
+            //var allRatingsResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
 
-            foreach (var item in allRatingsResponse.Documents)
+            //var allRatingsResponse1 = await elasticSearchClient.SearchAsync<Ratings>(x => x.Source(s => s.Includes(i => i.Field(f => f.userId))).Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
+
+            // Creates list of strings.
+            List<string> allDifferentCategoriesOfUsersRatings = new List<string>();
+
+            // For each user in the user list...
+            foreach (var user in allDifferentUsersListResponse)
             {
+                // Gets all movies he has rated.
+                var allMoviesOfAUserResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(user.ToString()))).Index(ratingsIndexName).Size(10000));
 
+                // Puts the movies into a list.
+                var allMoviesOfAUserListResponse = allMoviesOfAUserResponse.Documents.Select(x => x.movieId).ToList();
+
+                // For each of the movies the user has rated...
+                foreach (var movie in allMoviesOfAUserListResponse)
+                {
+                    // Gets the genres of the movie.
+                    var allCategoriesOfAMovieOfAUserResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId).Query(movie.ToString()))).Index(moviesIndexName).Size(10000));
+
+                    // Puts the genres into a list.
+                    var allCategoriesOfAMovieOfAUserListResponse = allCategoriesOfAMovieOfAUserResponse.Documents.Select(x => x.genres).ToList();
+
+                    // For each of the categories in the ...
+                    foreach (var category in allCategoriesOfAMovieOfAUserListResponse)
+                    {
+                        // For each of the items in the category...
+                        foreach (var item in category)
+                        {
+                            // If 
+                            if (!allDifferentCategoriesOfUsersRatings.Contains(item))
+                            {
+                                allDifferentCategoriesOfUsersRatings.Add(item);
+                            }
+                        }
+                    }
+                }
             }
 
-            foreach (var item in allDifferentCategoriesResponse)
-            {
+            // Creates list of strings.
+            List<List<string>> testing = new List<List<string>>();
 
+            foreach (var category in allDifferentCategoriesResponse)
+            {
+                // Create the first column with categories
+                //testing[0].Add(category);
+
+                foreach (var user in allDifferentCategoriesOfUsersRatings)
+                {
+                    Console.WriteLine(user);
+                }
             }
         }
     }
