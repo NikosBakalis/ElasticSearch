@@ -106,7 +106,7 @@ namespace ElasticSearch
                 // Prints the message below.
                 Console.WriteLine("Search of: - " + userMovieName + " - returned zero results");
             }
-            
+
             // Empty line.
             Console.WriteLine();
 
@@ -151,10 +151,10 @@ namespace ElasticSearch
                 // Adds the movie ID to the list.
                 ratings.Add(item.rating);
             }
-            
+
             // Creates a list of floats.
             List<float> averageRatingsForAllMoviesOfAUser = new List<float>();
-            
+
             // For each movie ID...
             foreach (var item in moviesIds)
             {
@@ -192,7 +192,7 @@ namespace ElasticSearch
                 averageRatingsForAllMoviesOfAUser = averageRatingsForAllMoviesOfAUser[i],
             });
 
-            var sortedListOfMoviesRatingsAndAverageRatings = listOfMoviesRatingsAndAverageRatings.OrderByDescending(x => x.ratings).ThenByDescending (z => z.averageRatingsForAllMoviesOfAUser).ToList();
+            var sortedListOfMoviesRatingsAndAverageRatings = listOfMoviesRatingsAndAverageRatings.OrderByDescending(x => x.ratings).ThenByDescending(z => z.averageRatingsForAllMoviesOfAUser).ToList();
 
 
             // For each item in those three lists...
@@ -241,12 +241,14 @@ namespace ElasticSearch
 
             //var allRatingsResponse1 = await elasticSearchClient.SearchAsync<Ratings>(x => x.Source(s => s.Includes(i => i.Field(f => f.userId))).Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
 
-            // Creates list of strings.
-            List<string> allDifferentCategoriesOfUsersRatings = new List<string>();
+            Dictionary<int, List<string>> userAndHisCategoriesDictionary = new Dictionary<int, List<string>>();
 
             // For each user in the user list...
             foreach (var user in allDifferentUsersListResponse)
             {
+                // Creates list of strings.
+                List<string> allDifferentCategoriesOfUsersRatings = new List<string>();
+
                 // Gets all movies he has rated.
                 var allMoviesOfAUserResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(user.ToString()))).Index(ratingsIndexName).Size(10000));
 
@@ -276,20 +278,25 @@ namespace ElasticSearch
                         }
                     }
                 }
+                userAndHisCategoriesDictionary.Add(user, allDifferentCategoriesOfUsersRatings);
             }
 
-            // Creates list of strings.
-            List<List<string>> testing = new List<List<string>>();
+            Dictionary<string, List<int>> categoryAndItsUsersDictionary = new Dictionary<string, List<int>>();
 
             foreach (var category in allDifferentCategoriesResponse)
             {
-                // Create the first column with categories
-                //testing[0].Add(category);
-
-                foreach (var user in allDifferentCategoriesOfUsersRatings)
+                List<int> usersOfACategory = new List<int>();
+                foreach (KeyValuePair<int, List<string>> entry in userAndHisCategoriesDictionary)
                 {
-                    Console.WriteLine(user);
+                    foreach (var categoryToTest in entry.Value)
+                    {
+                        if (category.Equals(categoryToTest))
+                        {
+                            usersOfACategory.Add(entry.Key);
+                        }
+                    }
                 }
+                categoryAndItsUsersDictionary.Add(category, usersOfACategory);
             }
         }
     }
