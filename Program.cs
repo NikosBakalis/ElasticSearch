@@ -236,12 +236,9 @@ namespace ElasticSearch
                 }
             }
 
-            //// Gets all ratings.
-            //var allRatingsResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
-
-            //var allRatingsResponse1 = await elasticSearchClient.SearchAsync<Ratings>(x => x.Source(s => s.Includes(i => i.Field(f => f.userId))).Query(y => y.Match(z => z.Field(a => a.rating))).Index(ratingsIndexName).Size(10000));
-
             Dictionary<int, List<string>> userAndHisCategoriesDictionary = new Dictionary<int, List<string>>();
+
+            Dictionary<int, List<int>> userAndHisMoviesDictionary = new Dictionary<int, List<int>>();
 
             // For each user in the user list...
             foreach (var user in allDifferentUsersListResponse)
@@ -252,51 +249,68 @@ namespace ElasticSearch
                 // Gets all movies he has rated.
                 var allMoviesOfAUserResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(user.ToString()))).Index(ratingsIndexName).Size(10000));
 
-                // Puts the movies into a list.
-                var allMoviesOfAUserListResponse = allMoviesOfAUserResponse.Documents.Select(x => x.movieId).ToList();
-
                 // For each of the movies the user has rated...
-                foreach (var movie in allMoviesOfAUserListResponse)
+                foreach (var movie in allMoviesOfAUserResponse.Documents.Select(x => x.movieId).ToList())
                 {
                     // Gets the genres of the movie.
                     var allCategoriesOfAMovieOfAUserResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId).Query(movie.ToString()))).Index(moviesIndexName).Size(10000));
 
-                    // Puts the genres into a list.
-                    var allCategoriesOfAMovieOfAUserListResponse = allCategoriesOfAMovieOfAUserResponse.Documents.Select(x => x.genres).ToList();
-
                     // For each of the categories in the ...
-                    foreach (var category in allCategoriesOfAMovieOfAUserListResponse)
+                    foreach (var category in allCategoriesOfAMovieOfAUserResponse.Documents.Select(x => x.genres).ToList())
                     {
                         // For each of the items in the category...
                         foreach (var item in category)
                         {
-                            // If 
+                            // If list does not already contains the item...
                             if (!allDifferentCategoriesOfUsersRatings.Contains(item))
                             {
+                                // Adds the item to the list.
                                 allDifferentCategoriesOfUsersRatings.Add(item);
                             }
                         }
                     }
                 }
+                // Adds to the dictionary the user as the key and the movie as a value.
+                userAndHisMoviesDictionary.Add(user, allMoviesOfAUserResponse.Documents.Select(x => x.movieId).ToList());
+
+                // Adds to the dictionary the user as the key and the category as a value.
                 userAndHisCategoriesDictionary.Add(user, allDifferentCategoriesOfUsersRatings);
             }
 
+            // Creates dictionary with key and value.
             Dictionary<string, List<int>> categoryAndItsUsersDictionary = new Dictionary<string, List<int>>();
 
+            // For each category in the different categories list...
             foreach (var category in allDifferentCategoriesResponse)
             {
+                // Creates list to store the users of a category.
                 List<int> usersOfACategory = new List<int>();
+
+                // For each key and value in dictionary...
                 foreach (KeyValuePair<int, List<string>> entry in userAndHisCategoriesDictionary)
                 {
+                    // For each category to the list of the dictionary...
                     foreach (var categoryToTest in entry.Value)
                     {
+                        // If the category is equal to the category...
                         if (category.Equals(categoryToTest))
                         {
+                            // Adds the key to the list.
                             usersOfACategory.Add(entry.Key);
                         }
                     }
                 }
+                // Adds to the dictionary the category as a key and the user as a value.
                 categoryAndItsUsersDictionary.Add(category, usersOfACategory);
+            }
+
+            foreach(KeyValuePair<string, List<int>> entry in categoryAndItsUsersDictionary)
+            {
+                foreach (var user in entry.Value)
+                {
+                    List<List<float>> test = new List<List<float>>();
+
+                }
             }
         }
     }
