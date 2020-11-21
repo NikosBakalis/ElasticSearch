@@ -86,7 +86,8 @@ namespace ElasticSearch
                                                                      .Query(y => y
                                                                      .MoreLikeThis(z => z
                                                                      .Fields(a => a
-                                                                     .Field(b => b.title))
+                                                                     .Field(b => b
+                                                                     .title))
                                                                      .Like(c => c
                                                                      .Text(userMovieName))
                                                                      .MinTermFrequency(1)))
@@ -192,6 +193,7 @@ namespace ElasticSearch
                 averageRatingsForAllMoviesOfAUser = averageRatingsForAllMoviesOfAUser[i],
             });
 
+            // Sorts the list by descending ratings and
             var sortedListOfMoviesRatingsAndAverageRatings = listOfMoviesRatingsAndAverageRatings.OrderByDescending(x => x.ratings).ThenByDescending(z => z.averageRatingsForAllMoviesOfAUser).ToList();
 
 
@@ -236,8 +238,10 @@ namespace ElasticSearch
                 }
             }
 
+            // Creates dictionary with key and value.
             Dictionary<int, List<string>> userAndHisCategoriesDictionary = new Dictionary<int, List<string>>();
 
+            // Creates dictionary with key and value.
             Dictionary<int, List<int>> userAndHisMoviesDictionary = new Dictionary<int, List<int>>();
 
             // For each user in the user list...
@@ -383,6 +387,14 @@ namespace ElasticSearch
 
             // Puts the ratings from the dictionary to a list.
             var ratingsList = new List<List<float>>(categoryAndItsRatingsDictionary.Values);
+
+            // Creates a list that concatenates the three lists we created before.
+            var genresUserIdsAndRatingsList = Enumerable.Range(0, moviesIds.Count).Select(i => new
+            {
+                genresList = genresList[i],
+                userIdList = userIdList[i],
+                ratingsList = ratingsList[i],
+            });
         }
     }
 }
