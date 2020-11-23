@@ -70,10 +70,12 @@ namespace ElasticSearch
             #endregion
 
             // Searches all the data of a specific index.
-            var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
+            //var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
 
             // Searches all the data of a specific index.
             //var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
+            
+            #region First Question
 
             // User types name of movie.
             Console.WriteLine("Enter name of Movie: ");
@@ -108,8 +110,12 @@ namespace ElasticSearch
                 Console.WriteLine("Search of: - " + userMovieName + " - returned zero results");
             }
 
+            #endregion
+
             // Empty line.
             Console.WriteLine();
+
+            #region Second Question
 
             // User types user ID.
             Console.WriteLine("Enter user ID: ");
@@ -203,6 +209,11 @@ namespace ElasticSearch
                 // Prints the item.
                 Console.WriteLine(item);
             }
+
+            #endregion
+
+            // Empty line.
+            Console.WriteLine();
 
             // Gets all different users.
             var allDifferentUsersResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Source(s => s.Includes(i => i.Field(f => f.userId))).Query(q => q.Match(m => m.Field(a => a.userId))).Collapse(c => c.Field(b => b.userId)).Index(ratingsIndexName).Size(10000));
