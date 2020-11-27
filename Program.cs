@@ -1,7 +1,6 @@
-﻿using Microsoft.ML;
-
+﻿using Elasticsearch.Net;
+using Microsoft.ML;
 using Nest;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,11 +39,15 @@ namespace ElasticSearch
 
             #endregion
 
+            #region From .csv to class
+
             // Transforms .csv file to Movies class.
             var csvToMovies = Linker.CSVToMovies(moviesFilePath);
 
             // Transforms .csv file to Ratings class.
             var csvToRatings = Linker.CSVToRatings(ratingsFilePath);
+
+            #endregion
 
             // Calls the Elastic Search Client.
             var elasticSearchClient = new ElasticClient();
@@ -71,12 +74,16 @@ namespace ElasticSearch
 
             #endregion
 
-            // Searches all the data of a specific index.
-            var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
+            #region Search testing
 
-            // Searches all the data of a specific index.
-            var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
-            
+            //// Searches all the data of a specific index.
+            //var searchMovieResponce = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.MatchAll()).Index(moviesIndexName).Size(10000));
+
+            //// Searches all the data of a specific index.
+            //var searchRatingResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.MatchAll()).Index(ratingsIndexName).Size(10000));
+
+            #endregion
+
             #region First Question
 
             // User types name of movie.
@@ -91,7 +98,7 @@ namespace ElasticSearch
                                                                      .MoreLikeThis(z => z
                                                                      .Fields(a => a
                                                                      .Field(b => b
-                                                                     .title))
+                                                                     .Title))
                                                                      .Like(c => c
                                                                      .Text(userMovieName))
                                                                      .MinTermFrequency(1)))
@@ -102,7 +109,7 @@ namespace ElasticSearch
             if (searchMovieStringResponce.Documents.Count != 0)
             {
                 // Prints the response of the elastic search with user's keyword input.
-                Console.WriteLine(searchMovieStringResponce.Documents.Select(x => x.title).Aggregate((x, y) => x + "\n" + y));
+                Console.WriteLine(searchMovieStringResponce.Documents.Select(x => x.Title).Aggregate((x, y) => x + "\n" + y));
             }
 
             // Else, the result is null...
@@ -129,13 +136,13 @@ namespace ElasticSearch
             var searchUserIdStringResponce = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(userUserId))).Index(ratingsIndexName).Size(10000));
 
             // Creates a list of integers.
-            List<float> moviesIds = new List<float>();
+            List<int> moviesIds = new List<int>();
 
             // For each one of the responses...
             foreach (var item in searchUserIdStringResponce.Documents)
             {
                 // Adds the movie ID to the list.
-                moviesIds.Add(item.movieId);
+                moviesIds.Add(item.movieId.GetHashCode());
             }
 
             // Creates a list of strings.
@@ -145,7 +152,7 @@ namespace ElasticSearch
             foreach (var item in moviesIds)
             {
                 // Searches all the data of a specific index matching an item.
-                var movieNamesByMovieIds = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.movieId).Query(item.ToString()))).Index(moviesIndexName).Size(10000));
+                var movieNamesByMovieIds = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.MovieId).Query(item.ToString()))).Index(moviesIndexName).Size(10000));
 
                 // TODO: Add only the title of the movies.
                 moviesNames.Add(movieNamesByMovieIds.ToString());
@@ -230,53 +237,91 @@ namespace ElasticSearch
             #region All Different Movies
 
             // Gets all different movies.
-            var allDifferentMoviesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Source(s => s.Includes(i => i.Field(f => f.movieId))).Query(q => q.Match(m => m.Field(a => a.movieId))).Collapse(c => c.Field(b => b.movieId)).Index(moviesIndexName).Size(10000));
+            var allDifferentMoviesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Source(s => s.Includes(i => i.Field(f => f.MovieId))).Query(q => q.Match(m => m.Field(a => a.MovieId))).Collapse(c => c.Field(b => b.MovieId)).Index(moviesIndexName).Size(10000));
 
             // Gets all different movies to list.
-            var allDifferentMoviesListResponse = allDifferentMoviesResponse.Documents.Select(x => x.movieId).ToList();
+            var allDifferentMoviesListResponse = allDifferentMoviesResponse.Documents.Select(x => x.MovieId).ToList();
 
             #endregion
 
             #region All Different Genres
 
             // Gets all categories.
-            var allCategoriesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.genres))).Index(moviesIndexName).Size(10000));
+            var allGenresResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Query(y => y.Match(z => z.Field(a => a.Genres))).Index(moviesIndexName).Size(10000));
 
             // Creates list of strings.
-            List<string> allDifferentCategoriesListResponse = new List<string>();
+            List<string> allDifferentGenresListResponse = new List<string>();
 
             // For each one categories response...
-            foreach (var item in allCategoriesResponse.Documents)
+            foreach (var item in allGenresResponse.Documents)
             {
                 //allDifferentCategoriesResponse.Add(item.movieId);
                 // For each genre in genres...
-                foreach (var genre in item.genres)
+                foreach (var genre in item.Genres)
                 {
                     // If there is not already in the list...
-                    if (!allDifferentCategoriesListResponse.Contains(genre))
+                    if (!allDifferentGenresListResponse.Contains(genre))
                     {
                         // Adds genre to the list.
-                        allDifferentCategoriesListResponse.Add(genre);
+                        allDifferentGenresListResponse.Add(genre);
                     }
                 }
             }
 
             #endregion
 
-            // Creates dictionary with key and value.
-            Dictionary<int, List<int>> userAndHisMoviesDictionary = new Dictionary<int, List<int>>();
+            #region Takes average rating per category and per user
+
+            var genreAndMovies = new Dictionary<string, List<int>>();
+
+            foreach (var genre in allDifferentGenresListResponse)
+            {
+                var genreOfMovies = await elasticSearchClient.SearchAsync<Movies>(s => s
+                                                             .Query(q => q
+                                                             .Match(m => m
+                                                             .Field(f => f
+                                                             .Genres)
+                                                             .Query(genre)))
+                                                             .Index(moviesIndexName)
+                                                             .Size(10000));
+
+                genreAndMovies.Add(genre, genreOfMovies.Documents.Select(s => s.MovieId).ToList());
+            }
+
+            
+            var ratingsPerUserAndGenre = new Dictionary<int, List<float>>();
 
             foreach (var user in allDifferentUsersListResponse)
             {
-                // Creates list of strings.
-                List<string> allDifferentCategoriesOfUsersRatings = new List<string>();
+                var listsOfRatings = new List<float>();
 
-                // Gets all movies he has rated.
-                var allMoviesOfAUserResponse = await elasticSearchClient.SearchAsync<Ratings>(x => x.Query(y => y.Match(z => z.Field(a => a.userId).Query(user.ToString()))).Index(ratingsIndexName).Size(10000));
+                foreach (KeyValuePair<string, List<int>> entry in genreAndMovies)
+                {
+                    var movieRatingPerUserPerCategory = await elasticSearchClient.SearchAsync<Ratings>(x => x
+                                                                             .Source(s => s
+                                                                             .Includes(i => i
+                                                                             .Fields(f => f
+                                                                             .rating)))
+                                                                             .Query(y => y
+                                                                             .Bool(b => b
+                                                                             .Filter(fil => fil
+                                                                             .Terms(m => m
+                                                                             .Field(g => g
+                                                                             .userId)
+                                                                             .Terms(user)), fil => fil
+                                                                             .Terms(m => m
+                                                                             .Field(g => g
+                                                                             .movieId)
+                                                                             .Terms(entry.Value)))))
+                                                                             .Index(ratingsIndexName)
+                                                                             .Size(10000));
 
-                // Adds to the dictionary the user as the key and the movie as a value.
-                userAndHisMoviesDictionary.Add(user, allMoviesOfAUserResponse.Documents.Select(x => x.movieId).ToList());
+                    listsOfRatings.Add(movieRatingPerUserPerCategory.Documents.Count == 0 ? 0 : movieRatingPerUserPerCategory.Documents.Select(s => s.rating).ToList().Average());
+                }
+                ratingsPerUserAndGenre.Add(user, listsOfRatings);
             }
+
+            #endregion
 
             #region K-Means
 

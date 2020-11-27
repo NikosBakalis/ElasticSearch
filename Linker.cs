@@ -13,7 +13,7 @@ namespace ElasticSearch
     public static class Linker
     {
         #region Public Methods
-
+        
         /// <summary>
         /// Transforms the .csv file data to movies class data.
         /// </summary>
@@ -37,13 +37,13 @@ namespace ElasticSearch
                     movieList.Add(new Movies()
                     {
                         // A movie ID,
-                        movieId = int.Parse(line[0]),
+                        MovieId = int.Parse(line[0]),
 
                         // A title, (This title may contains "," characters so we treat them real good.)
-                        title = line.Skip(1).Take(line.Length - 2).Aggregate((x, y) => x + "," + y),
+                        Title = line.Skip(1).Take(line.Length - 2).Aggregate((x, y) => x + "," + y),
 
                         // And some genres separated with this "|" character.
-                        genres = new List<string>(line[^1].Split("|"))
+                        Genres = new List<string>(line[^1].Split("|"))
                     });
                 }
                 // else...
@@ -53,13 +53,13 @@ namespace ElasticSearch
                     movieList.Add(new Movies()
                     {
                         // A movie ID,
-                        movieId = int.Parse(line[0]),
+                        MovieId = int.Parse(line[0]),
 
                         // A title,
-                        title = line[1],
+                        Title = line[1],
 
                         // And some genres separated with this "|" character.
-                        genres = new List<string>(line[2].Split("|"))
+                        Genres = new List<string>(line[2].Split("|"))
                     });
                 }
             }
@@ -99,8 +99,8 @@ namespace ElasticSearch
                     timestamp = line[3]
                 });
             }
-            // Returns the list of movies.
-            return ratingList;
+
+            return ratingList.Where(x => x.movieId <= 9125).ToList();
         }
 
         public static (IDataView training, IDataView test) LoadData(MLContext mlContext)
@@ -113,7 +113,7 @@ namespace ElasticSearch
 
             return (trainingDataView, testDataView);
         }
-    }
 
-    #endregion
+        #endregion
+    }
 }

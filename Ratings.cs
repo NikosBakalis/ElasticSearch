@@ -7,7 +7,7 @@ namespace ElasticSearch
     /// <summary>
     /// Ratings Class.
     /// </summary>
-    public class Ratings
+    public class Ratings : BaseDataModel<Ratings>
     {
         #region Public Variables
         // The user ID.
