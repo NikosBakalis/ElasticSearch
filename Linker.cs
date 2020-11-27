@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.ML;
+
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -98,6 +101,17 @@ namespace ElasticSearch
             }
             // Returns the list of movies.
             return ratingList;
+        }
+
+        public static (IDataView training, IDataView test) LoadData(MLContext mlContext)
+        {
+            var trainingDataPath = Path.Combine(Environment.CurrentDirectory, "Data", "recommendation-ratings-train.csv");
+            var testDataPath = Path.Combine(Environment.CurrentDirectory, "Data", "recommendation-ratings-test.csv");
+
+            IDataView trainingDataView = mlContext.Data.LoadFromTextFile<Movies>(trainingDataPath, hasHeader: true, separatorChar: ',');
+            IDataView testDataView = mlContext.Data.LoadFromTextFile<Movies>(testDataPath, hasHeader: true, separatorChar: ',');
+
+            return (trainingDataView, testDataView);
         }
     }
 
