@@ -272,10 +272,13 @@ namespace ElasticSearch
 
             #region Takes average rating per category and per user
 
+            // Creates a dictionary with key as string and value as list of integers.
             var genreAndMovies = new Dictionary<string, List<int>>();
 
+            // For each genre in all different genres List...
             foreach (var genre in allDifferentGenresListResponse)
             {
+                // Gets the genres of the movies.
                 var genreOfMovies = await elasticSearchClient.SearchAsync<Movies>(s => s
                                                              .Query(q => q
                                                              .Match(m => m
@@ -285,18 +288,23 @@ namespace ElasticSearch
                                                              .Index(moviesIndexName)
                                                              .Size(10000));
 
+                // Adds genres and movies to the list.
                 genreAndMovies.Add(genre, genreOfMovies.Documents.Select(s => s.MovieId).ToList());
             }
 
-            
-            var ratingsPerUserAndGenre = new Dictionary<int, List<float>>();
+            // Create a dictionary with key as integer and value as dictionary with key as string and value as float.
+            var ratingsPerUserAndGenre = new Dictionary<int, Dictionary<string, float>>();
 
+            // For each use in add different users...
             foreach (var user in allDifferentUsersListResponse)
             {
-                var listsOfRatings = new List<float>();
+                // Create a dictionary with key as string and value as float.
+                var listsOfRatings = new Dictionary<string, float>();
 
+                // For each key pair value in genres and movies...
                 foreach (KeyValuePair<string, List<int>> entry in genreAndMovies)
                 {
+                    // Gets the movie rating.
                     var movieRatingPerUserPerCategory = await elasticSearchClient.SearchAsync<Ratings>(x => x
                                                                              .Source(s => s
                                                                              .Includes(i => i
@@ -316,8 +324,10 @@ namespace ElasticSearch
                                                                              .Index(ratingsIndexName)
                                                                              .Size(10000));
 
-                    listsOfRatings.Add(movieRatingPerUserPerCategory.Documents.Count == 0 ? 0 : movieRatingPerUserPerCategory.Documents.Select(s => s.rating).ToList().Average());
+                    // Adds the genre to the key of the dictionary and the average of the movie ratings of a genre of a user to the value.
+                    listsOfRatings.Add(entry.Key, movieRatingPerUserPerCategory.Documents.Count == 0 ? 0 : movieRatingPerUserPerCategory.Documents.Select(s => s.rating).ToList().Average());
                 }
+                // Adds the user to the key of the dictionary and the list of ratings to the value.
                 ratingsPerUserAndGenre.Add(user, listsOfRatings);
             }
 
