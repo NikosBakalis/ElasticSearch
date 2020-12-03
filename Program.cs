@@ -1,10 +1,5 @@
-﻿using Elasticsearch.Net;
-
-using Microsoft.ML;
-using Microsoft.ML.Trainers;
-
+﻿using Microsoft.ML;
 using Nest;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,8 +48,12 @@ namespace ElasticSearch
 
             #endregion
 
+            #region Calls Elastic Search Client
+
             // Calls the Elastic Search Client.
             var elasticSearchClient = new ElasticClient();
+
+            #endregion
 
             #region Execute Once
 
@@ -113,19 +112,16 @@ namespace ElasticSearch
             if (searchMovieStringResponce.Documents.Count != 0)
             {
                 // Prints the response of the elastic search with user's keyword input.
-                Console.WriteLine(searchMovieStringResponce.Documents.Select(x => x.Title).Aggregate((x, y) => x + "\n" + y));
+                Console.WriteLine(searchMovieStringResponce.Documents.Select(x => x.Title).Aggregate((x, y) => x + "\n" + y) + "\n");
             }
             // Else, the result is null...
             else
             {
                 // Prints the message below.
-                Console.WriteLine("Search of: - " + userMovieName + " - returned zero results");
+                Console.WriteLine("Search of: - " + userMovieName + " - returned zero results\n");
             }
 
             #endregion
-
-            // Empty line.
-            Console.WriteLine();
 
             #region Second Question
 
@@ -240,10 +236,10 @@ namespace ElasticSearch
                 Console.WriteLine(item);
             }
 
-            #endregion
-
             // Empty line.
             Console.WriteLine();
+
+            #endregion
 
             #region All Different Users
 
