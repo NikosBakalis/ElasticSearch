@@ -7,7 +7,7 @@ namespace ElasticSearch
     /// <summary>
     /// Average rating per genre class.
     /// </summary>
-    class AverageRatingPerGenre
+    public class AverageRatingPerGenre
     {
         #region Public Properties
 
@@ -52,6 +52,14 @@ namespace ElasticSearch
         public float NoGenresListed { get; set; }
 
         #endregion
+
+        /// <summary>
+        /// Basic Constructor.
+        /// </summary>
+        public AverageRatingPerGenre()
+        {
+
+        }
 
         /// <summary>
         /// Standard constructor.

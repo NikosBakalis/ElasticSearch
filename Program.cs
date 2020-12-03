@@ -1,6 +1,10 @@
 ﻿using Elasticsearch.Net;
+
 using Microsoft.ML;
+using Microsoft.ML.Trainers;
+
 using Nest;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -316,7 +320,7 @@ namespace ElasticSearch
             foreach (var user in allDifferentUsersListResponse)
             {
                 // Create a dictionary with key as string and value as float.
-                var listsOfRatings = new Dictionary<string, float>();
+                var listOfAverageRatings = new Dictionary<string, float>();
 
                 // For each key pair value in genres and movies...
                 foreach (KeyValuePair<string, List<int>> entry in genreAndMovies)
@@ -342,10 +346,10 @@ namespace ElasticSearch
                                                                                  .Size(10000));
 
                     // Adds the genre to the key of the dictionary and the average of the movie ratings of a genre of a user to the value.
-                    listsOfRatings.Add(entry.Key, movieRatingPerUserPerCategory.Documents.Count == 0 ? 0 : movieRatingPerUserPerCategory.Documents.Select(s => s.rating).ToList().Average());
+                    listOfAverageRatings.Add(entry.Key, movieRatingPerUserPerCategory.Documents.Count == 0 ? 0 : movieRatingPerUserPerCategory.Documents.Select(s => s.rating).ToList().Average());
                 }
                 // Adds the user to the key of the dictionary and the list of ratings to the value.
-                ratingsPerUserAndGenre.Add(user, listsOfRatings);
+                ratingsPerUserAndGenre.Add(user, listOfAverageRatings);
             }
 
             #endregion
@@ -354,7 +358,35 @@ namespace ElasticSearch
 
             var mlContext = new MLContext();
 
-            //IDataView dataView = mlContext.Data.LoadFromTextFile<AverageRatingPerUserAndCategory>("", hasHeader: true);
+            var ratingsPerUserAndGenreToClass = ratingsPerUserAndGenre.Select(s => s.Value.Select(x => x.Value).ToList());
+
+            var dataSet = new List<AverageRatingPerGenre>();
+
+            foreach (var item in ratingsPerUserAndGenreToClass)
+            {
+                dataSet.Add(new AverageRatingPerGenre(item));
+            }
+
+            IDataView trainingData = mlContext.Data.LoadFromEnumerable(dataSet);
+
+            // Get the column names
+            var propertyNames = typeof(AverageRatingPerGenre).GetProperties().Select(x => x.Name).ToArray();
+
+            var numberOfClusters = 6;
+
+            // Initialize the k-means trainer
+            var kMeansTrainer = mlContext.Transforms.Concatenate("Features", propertyNames)
+                                                    .Append(mlContext.Clustering.Trainers
+                                                    .KMeans("Features", numberOfClusters: numberOfClusters));
+
+            // Train the model
+            var trainedAverageRatingsModel = kMeansTrainer.Fit(trainingData);
+
+            // Run the model on the same data set
+            var transformedAverageRatingsData = trainedAverageRatingsModel.Transform(trainingData);
+
+            // Get the predictions
+            var predictions = mlContext.Data.CreateEnumerable<Prediction>(transformedAverageRatingsData, false).ToList();
 
             #endregion
         }
