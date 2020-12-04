@@ -352,22 +352,29 @@ namespace ElasticSearch
 
             #region K-Means
 
+            // Creates the machine learning context.
             var mlContext = new MLContext();
 
+            // Creates an IEnumerable of lists of floats.
             var ratingsPerUserAndGenreToClass = ratingsPerUserAndGenre.Select(s => s.Value.Select(x => x.Value).ToList());
 
+            // Creates a list of AverageRatingPerGenre type.
             var dataSet = new List<AverageRatingPerGenre>();
 
+            // For each item in the existing class...
             foreach (var item in ratingsPerUserAndGenreToClass)
             {
+                // Adds to the dataset a new object.
                 dataSet.Add(new AverageRatingPerGenre(item));
             }
 
+            // Creates the IDataView of the dataset.
             IDataView trainingData = mlContext.Data.LoadFromEnumerable(dataSet);
 
             // Get the column names
             var propertyNames = typeof(AverageRatingPerGenre).GetProperties().Select(x => x.Name).ToArray();
 
+            // Choose a number of clusters.
             var numberOfClusters = 6;
 
             // Initialize the k-means trainer
