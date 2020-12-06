@@ -352,6 +352,8 @@ namespace ElasticSearch
 
             #region K-Means
 
+            #region Clustering
+
             // Creates the machine learning context.
             var mlContext = new MLContext();
 
@@ -377,6 +379,10 @@ namespace ElasticSearch
             // Choose a number of clusters.
             var numberOfClusters = 6;
 
+            #endregion
+
+            #region Training
+
             // Initialize the k-means trainer
             var kMeansTrainer = mlContext.Transforms.Concatenate("Features", propertyNames)
                                                     .Append(mlContext.Clustering.Trainers
@@ -388,8 +394,26 @@ namespace ElasticSearch
             // Run the model on the same data set
             var transformedAverageRatingsData = trainedAverageRatingsModel.Transform(trainingData);
 
+            #endregion
+
+            #region Prediction
+
             // Get the predictions
             var predictions = mlContext.Data.CreateEnumerable<Prediction>(transformedAverageRatingsData, false).ToList();
+
+            for (int cluster = 1; cluster <= numberOfClusters; cluster++)
+            {
+                var respondForCluster = predictions.Where(w => w.PredictedLabel == cluster);
+
+                foreach (var item in respondForCluster)
+                {
+                    var o = predictions.IndexOf(item);
+
+                    var i = allDifferentUsersListResponse.ElementAt(o);
+                }
+            }
+
+            #endregion
 
             #endregion
         }
