@@ -401,15 +401,20 @@ namespace ElasticSearch
             // Get the predictions
             var predictions = mlContext.Data.CreateEnumerable<Prediction>(transformedAverageRatingsData, false).ToList();
 
+            // For each one of the clusters...
             for (int cluster = 1; cluster <= numberOfClusters; cluster++)
             {
+                // Every respond of the current cluster.
                 var respondForCluster = predictions.Where(w => w.PredictedLabel == cluster);
 
+                // For each item in the respond of the current cluster...
                 foreach (var item in respondForCluster)
                 {
-                    var o = predictions.IndexOf(item);
+                    // Takes the index of an item.
+                    var index = predictions.IndexOf(item);
 
-                    var i = allDifferentUsersListResponse.ElementAt(o);
+                    // Finds the user with the specific index.
+                    var indexOfUser = allDifferentUsersListResponse.ElementAt(index);
                 }
             }
 
