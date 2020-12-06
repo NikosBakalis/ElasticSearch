@@ -377,7 +377,7 @@ namespace ElasticSearch
             var propertyNames = typeof(AverageRatingPerGenre).GetProperties().Select(x => x.Name).ToArray();
 
             // Choose a number of clusters.
-            var numberOfClusters = 6;
+            var numberOfClusters = 3;
 
             #endregion
 
@@ -404,8 +404,13 @@ namespace ElasticSearch
             // For each one of the clusters...
             for (int cluster = 1; cluster <= numberOfClusters; cluster++)
             {
+                Console.WriteLine(cluster);
+
                 // Every respond of the current cluster.
                 var respondForCluster = predictions.Where(w => w.PredictedLabel == cluster);
+
+                // Creates list of integers.
+                var usersOfACluster = new List<int>();
 
                 // For each item in the respond of the current cluster...
                 foreach (var item in respondForCluster)
@@ -415,6 +420,69 @@ namespace ElasticSearch
 
                     // Finds the user with the specific index.
                     var indexOfUser = allDifferentUsersListResponse.ElementAt(index);
+
+                    // Gets the user ID by adding 1 to the index we got.
+                    var userId = indexOfUser + 1;
+
+                    // Adds the users to the users of the current cluster list.
+                    usersOfACluster.Add(userId);
+                }
+
+                // Creates a dictionary with key an integer and value a dictionary with key an integer and value a float.
+                var allUsersAndAllMoviesRatings = new Dictionary<int, Dictionary<int, float>>();
+
+                // For each user in users of a cluster...
+                foreach (var user in usersOfACluster)
+                {
+                    // Gets all the movies that the user has rated.
+                    var moviesOfAUser = await elasticSearchClient.SearchAsync<Ratings>(x => x
+                                                                 .Query(y => y
+                                                                 .Match(m => m
+                                                                 .Field(f => f
+                                                                 .userId)
+                                                                 .Query(user
+                                                                 .ToString())))
+                                                                 .Index(ratingsIndexName)
+                                                                 .Size(10000));
+
+                    // Creates a list with all the movie IDs of a user.
+                    var moviesOfAUserList = moviesOfAUser.Documents.Select(s => s.movieId).ToList();
+
+                    // Creates a dictionary with key an integer and value a float.
+                    var allMoviesRatings = new Dictionary<int, float>();
+
+                    // For each movie...
+                    foreach (var movie in allDifferentMoviesListResponse)
+                    {
+                        // If the user has NOT already rated this movie...
+                        if (!moviesOfAUserList.Contains(movie))
+                        {
+                            // Gets the movie rating.
+                            var ratingOfOthersOfCluster = await elasticSearchClient.SearchAsync<Ratings>(x => x
+                                                                .Source(s => s
+                                                                .Includes(i => i
+                                                                .Fields(f => f
+                                                                .rating)))
+                                                                .Query(y => y
+                                                                .Bool(b => b
+                                                                .Filter(fil => fil
+                                                                .Terms(m => m
+                                                                .Field(g => g
+                                                                .userId)
+                                                                .Terms(usersOfACluster)), fil => fil
+                                                                .Terms(m => m
+                                                                .Field(g => g
+                                                                .movieId)
+                                                                .Terms(movie)))))
+                                                                .Index(ratingsIndexName)
+                                                                .Size(10000));
+
+                            // Adds to the dictionary movie ID as the key and the average of ratings of other users of the same cluster as a value.
+                            allMoviesRatings.Add(movie, ratingOfOthersOfCluster.Documents.Count == 0 ? 0 : ratingOfOthersOfCluster.Documents.Select(s => s.rating).Average());
+                        }
+                    }
+                    // Adds to the dictionary user ID as the key and the dictionary of average of ratings of other users of the same cluster as a value.
+                    allUsersAndAllMoviesRatings.Add(user, allMoviesRatings);
                 }
             }
 
