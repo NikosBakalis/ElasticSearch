@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 
 namespace ElasticSearch
 {
@@ -34,63 +31,22 @@ namespace ElasticSearch
 
         }
 
-        #endregion
-    }
-
-    public abstract class BaseDataModel<TDataModel>
-    {
-        #region Private Members
-
-        private static Lazy<PropertyInfo[]> mProperties = new Lazy<PropertyInfo[]>(() =>
-        {
-            return typeof(TDataModel).GetProperties();
-        });
-
-        #endregion
-
-        #region Public Methods
-
         /// <summary>
-        /// Returns a string that represents the current object
+        /// Standard constructor.
         /// </summary>
-        /// <returns></returns>
-        public override sealed string ToString()
+        /// <param name="values"></param>
+        public Movies(List<int> values)
         {
-            // Create the result
-            var result = string.Empty;
+            _ = values ?? throw new ArgumentNullException();
 
-            // For every property...
-            foreach(var property in mProperties.Value)
-            {
-                // Get the value
-                var value = property.GetValue(this);
+            if (values.Count != 3)
+                throw new ArgumentOutOfRangeException();
 
-                result += property.Name + ": ";
-
-                // If there is value...
-                if (value == null)
-                    // Continue
-                    continue;
-
-                if (property.PropertyType != typeof(string) && typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
-                {
-                    var values = new List<object>();
-
-                    foreach (var v in (IEnumerable)value)
-                        values.Add(v);
-
-                    result += values.Aggregate((x, y) => x + ", " + y);
-                }
-                else
-                    result += value.ToString();
-
-                result += " ";
-            }
-
-            // Return the result
-            return result.Trim();
+            MovieId = values[0];
+            Title = values[1];
+            Genres = values[2];
         }
 
-        #endregion
+            #endregion
     }
 }

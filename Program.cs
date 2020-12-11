@@ -1,5 +1,8 @@
 ﻿using Microsoft.ML;
+using Microsoft.ML.Transforms.Text;
+
 using Nest;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -497,6 +500,43 @@ namespace ElasticSearch
                 // Adds to the dictionary cluster as the key and the dictionary of all users, all movies and average ratings as a value.
                 allClustersAllUsersAndAllMoviesRatings.Add(cluster, allUsersAndAllMoviesRatings);
             }
+
+            #endregion
+
+            #endregion
+
+            #region Neural network
+
+            #region Word embeddings
+
+            // Gets an empty samples list of ratings.
+            var emptySamples = new List<Movies>();
+
+            // For each item in the existing class...
+            foreach (var item in allDifferentMoviesListResponse)
+            {
+                // Adds to the dataset a new object.
+                emptySamples.Add(new Movies(item));
+            }
+
+            // Convert sample list to an empty IDataView.
+            var emptyDataView = mlContext.Data.LoadFromEnumerable(emptySamples);
+
+            var textPipeline = mlContext.Transforms.Text.NormalizeText("Text")
+                                                        .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "Text"))
+                                                        .Append(mlContext.Transforms.Text.ApplyWordEmbedding("Features", "Tokens",
+                                                        WordEmbeddingEstimator.PretrainedModelKind.SentimentSpecificWordEmbedding));
+
+            // Fit to data.
+            var textTransformer = textPipeline.Fit(emptyDataView);
+
+            #endregion
+
+            #region One hot encoding
+
+            #endregion
+
+            #region Prediction
 
             #endregion
 
