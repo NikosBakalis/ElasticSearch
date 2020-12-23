@@ -1,4 +1,6 @@
 ﻿using Microsoft.ML;
+using Microsoft.ML.Data;
+using Microsoft.ML.Transforms;
 using Microsoft.ML.Transforms.Text;
 
 using Nest;
@@ -522,6 +524,7 @@ namespace ElasticSearch
             // Convert sample list to an empty IDataView.
             var titlesDataView = mlContext.Data.LoadFromEnumerable(new List<TitleInput>());
 
+            // A pipeline for converting text into a 150-dimension embedding vector.
             var textPipeline = mlContext.Transforms.Text.NormalizeText("Text")
                                                         .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "Text"))
                                                         .Append(mlContext.Transforms.Text.ApplyWordEmbedding("Features", "Tokens",
@@ -530,16 +533,22 @@ namespace ElasticSearch
             // Fit to data.
             var textTransformer = textPipeline.Fit(titlesDataView);
 
+            // Creates the prediction engine to get the embedding vector from the input text/string.
             var predictionEngine = mlContext.Model.CreatePredictionEngine<TitleInput, TitleFeatures>(textTransformer);
 
+            // Creates the predictions List.
             var predictionsList = new List<TitleFeatures>();
 
-            foreach (var item in allDifferentMovieTitlesListResponse)
+            // For each movie title in all different movie titles list...
+            foreach (var movieTitle in allDifferentMovieTitlesListResponse)
             {
-                var data = new TitleInput { Text = item };
+                // Passes the class value to data.
+                var data = new TitleInput { Text = movieTitle };
 
+                // Predicts the data.
                 var prediction = predictionEngine.Predict(data);
 
+                // Adds the prediction to the predictions list.
                 predictionsList.Add(prediction);
             }
 
@@ -557,20 +566,35 @@ namespace ElasticSearch
 
             #endregion
 
-            var genresDataView = mlContext.Data.LoadFromEnumerable(allDifferentGenresPerMovieTitlesListResponse.Select(s => new GenresInput { Genres = s.Aggregate((x, y) => x + "," + y) }));
+            // Create a list of parts.
+            List<GenresInput> genres = new List<GenresInput>();
 
-            var multiColumnKeyPipeline = mlContext.Transforms.Categorical.OneHotEncoding(new[]
-                {
-                    new InputOutputColumnPair("Genres")
-                }
-            );
+            // For each genres per movie in all different genres per movie titles list...
+            foreach (var genresPerMovie in allDifferentGenresPerMovieTitlesListResponse)
+            {
+                // Add genres to the genres list.
+                genres.Add(new GenresInput() { Genres = genresPerMovie.ToArray() });
+            }
 
-            IDataView transformedData = multiColumnKeyPipeline.Fit(genresDataView).Transform(genresDataView);
+            // Converts training data to IDataView.
+            IDataView genresDataView = mlContext.Data.LoadFromEnumerable(genres);
 
-            var convertedData = mlContext.Data.CreateEnumerable<GenresTransformed>(transformedData, true);
+            // A pipeline for one hot encoding the Education column.
+            var pipeline = mlContext.Transforms.Categorical.OneHotEncoding("GenresOneHotEncoded", "Genres");
 
-            foreach (GenresTransformed item in convertedData)
-                Console.WriteLine("{0}", string.Join(" ", item.Genre));
+            // Fits and transforms the data.
+            IDataView transformedData = pipeline.Fit(genresDataView).Transform(genresDataView);
+
+            // A pipeline for one hot encoding the Education column (using keying).
+            var keyPipeline = mlContext.Transforms.Categorical.OneHotEncoding("GenresOneHotEncoded", "Genres", OneHotEncodingEstimator.OutputKind.Key);
+
+            // Fits and transforms the data.
+            transformedData = keyPipeline.Fit(genresDataView).Transform(genresDataView);
+
+            //var keyEncodedColumn = transformedData.GetColumn<uint>("GenresOneHotEncoded");
+
+            //foreach (uint element in keyEncodedColumn)
+            //    Console.WriteLine(element);
 
             #endregion
 
@@ -579,6 +603,21 @@ namespace ElasticSearch
             #endregion
 
             #endregion
+        }
+
+        private static void PrintDataColumn(IDataView transformedData,
+            string columnName)
+        {
+            var countSelectColumn = transformedData.GetColumn<float[]>(
+                transformedData.Schema[columnName]);
+
+            foreach (var row in countSelectColumn)
+            {
+                for (var i = 0; i < row.Length; i++)
+                    Console.Write($"{row[i]}\t");
+
+                Console.WriteLine();
+            }
         }
     }
 }
