@@ -509,18 +509,18 @@ namespace ElasticSearch
 
             #region Word embeddings
 
-            // Gets an empty samples list of ratings.
-            var emptySamples = new List<Movies>();
+            #region All Different Movie Titles
 
-            // For each item in the existing class...
-            foreach (var item in allDifferentMoviesListResponse)
-            {
-                // Adds to the dataset a new object.
-                emptySamples.Add(new Movies(item));
-            }
+            // Gets all different movie titles.
+            var allDifferentMovieTitlesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Source(s => s.Includes(i => i.Field(f => f.Title))).Query(q => q.Match(m => m.Field(a => a.Title))).Collapse(c => c.Field(b => b.MovieId)).Index(moviesIndexName).Size(10000));
+
+            // Gets all different movie titles to list.
+            var allDifferentMovieTitlesListResponse = allDifferentMovieTitlesResponse.Documents.Select(x => x.Title).ToList();
+
+            #endregion
 
             // Convert sample list to an empty IDataView.
-            var emptyDataView = mlContext.Data.LoadFromEnumerable(emptySamples);
+            var titlesDataView = mlContext.Data.LoadFromEnumerable(new List<TitleInput>());
 
             var textPipeline = mlContext.Transforms.Text.NormalizeText("Text")
                                                         .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "Text"))
@@ -528,11 +528,49 @@ namespace ElasticSearch
                                                         WordEmbeddingEstimator.PretrainedModelKind.SentimentSpecificWordEmbedding));
 
             // Fit to data.
-            var textTransformer = textPipeline.Fit(emptyDataView);
+            var textTransformer = textPipeline.Fit(titlesDataView);
+
+            var predictionEngine = mlContext.Model.CreatePredictionEngine<TitleInput, TitleFeatures>(textTransformer);
+
+            var predictionsList = new List<TitleFeatures>();
+
+            foreach (var item in allDifferentMovieTitlesListResponse)
+            {
+                var data = new TitleInput { Text = item };
+
+                var prediction = predictionEngine.Predict(data);
+
+                predictionsList.Add(prediction);
+            }
 
             #endregion
 
             #region One hot encoding
+
+            #region All Different Movie Genres Per Title
+
+            // Gets all different genres per movie titles.
+            var allDifferentGenresPerMovieTitlesResponse = await elasticSearchClient.SearchAsync<Movies>(x => x.Source(s => s.Includes(i => i.Field(f => f.Genres))).Query(q => q.Match(m => m.Field(a => a.Genres))).Collapse(c => c.Field(b => b.MovieId)).Index(moviesIndexName).Size(10000));
+
+            // Gets all different genres per movie titles to list.
+            var allDifferentGenresPerMovieTitlesListResponse = allDifferentGenresPerMovieTitlesResponse.Documents.Select(x => x.Genres).ToList();
+
+            #endregion
+
+            var genresDataView = mlContext.Data.LoadFromEnumerable(allDifferentGenresPerMovieTitlesListResponse.Select(s => new GenresInput { Genres = s.Aggregate((x, y) => x + "," + y) }));
+
+            var multiColumnKeyPipeline = mlContext.Transforms.Categorical.OneHotEncoding(new[]
+                {
+                    new InputOutputColumnPair("Genres")
+                }
+            );
+
+            IDataView transformedData = multiColumnKeyPipeline.Fit(genresDataView).Transform(genresDataView);
+
+            var convertedData = mlContext.Data.CreateEnumerable<GenresTransformed>(transformedData, true);
+
+            foreach (GenresTransformed item in convertedData)
+                Console.WriteLine("{0}", string.Join(" ", item.Genre));
 
             #endregion
 

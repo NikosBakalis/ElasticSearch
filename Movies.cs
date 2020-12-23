@@ -35,17 +35,15 @@ namespace ElasticSearch
         /// Standard constructor.
         /// </summary>
         /// <param name="values"></param>
-        public Movies(List<int> values)
-        {
-            _ = values ?? throw new ArgumentNullException();
+        //public Movies(List<string> values)
+        //{
+        //    _ = values ?? throw new ArgumentNullException();
 
-            if (values.Count != 3)
-                throw new ArgumentOutOfRangeException();
+        //    if (values.Count != 1)
+        //        throw new ArgumentOutOfRangeException();
 
-            MovieId = values[0];
-            Title = values[1];
-            Genres = values[2];
-        }
+        //    Title = values[0];
+        //}
 
             #endregion
     }
