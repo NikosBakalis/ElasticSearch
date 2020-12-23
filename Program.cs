@@ -589,9 +589,9 @@ namespace ElasticSearch
             var keyPipeline = mlContext.Transforms.Categorical.OneHotEncoding("GenresOneHotEncoded", "Genres", OneHotEncodingEstimator.OutputKind.Key);
 
             // Fits and transforms the data.
-            transformedData = keyPipeline.Fit(genresDataView).Transform(genresDataView);
+            IDataView keyTransformedData = keyPipeline.Fit(genresDataView).Transform(genresDataView);
 
-            //var keyEncodedColumn = transformedData.GetColumn<uint>("GenresOneHotEncoded");
+            //var keyEncodedColumn = keyTransformedData.GetColumn<uint>("GenresOneHotEncoded");
 
             //foreach (uint element in keyEncodedColumn)
             //    Console.WriteLine(element);
