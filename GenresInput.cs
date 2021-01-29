@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace ElasticSearch
+﻿namespace ElasticSearch
 {
     internal class GenresInput
     {

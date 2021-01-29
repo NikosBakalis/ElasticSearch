@@ -358,6 +358,8 @@ namespace ElasticSearch
 
             #region K-Means
 
+            Console.WriteLine("K-Means");
+
             #region Clustering
 
             // Creates the machine learning context.
@@ -509,6 +511,8 @@ namespace ElasticSearch
 
             #region Neural network
 
+            Console.WriteLine("\nNeural Network");
+
             #region Word embeddings
 
             #region All Different Movie Titles
@@ -579,45 +583,194 @@ namespace ElasticSearch
             // Converts training data to IDataView.
             IDataView genresDataView = mlContext.Data.LoadFromEnumerable(genres);
 
-            // A pipeline for one hot encoding the Education column.
-            var pipeline = mlContext.Transforms.Categorical.OneHotEncoding("GenresOneHotEncoded", "Genres");
-
-            // Fits and transforms the data.
-            IDataView transformedData = pipeline.Fit(genresDataView).Transform(genresDataView);
-
             // A pipeline for one hot encoding the Education column (using keying).
             var keyPipeline = mlContext.Transforms.Categorical.OneHotEncoding("GenresOneHotEncoded", "Genres", OneHotEncodingEstimator.OutputKind.Key);
 
-            // Fits and transforms the data.
-            IDataView keyTransformedData = keyPipeline.Fit(genresDataView).Transform(genresDataView);
+            // Fit and Transform data.
+            IDataView oneHotEncodedData = keyPipeline.Fit(genresDataView).Transform(genresDataView);
 
-            //var keyEncodedColumn = keyTransformedData.GetColumn<uint>("GenresOneHotEncoded");
+            // Gets encoded data.
+            var keyEncodedColumn = oneHotEncodedData.GetColumn<uint[]>("GenresOneHotEncoded");
 
-            //foreach (uint element in keyEncodedColumn)
-            //    Console.WriteLine(element);
+            // Creates list of lists of u-integers.
+            List<List<uint>> oneHotEncodedElements = new List<List<uint>>();
+
+            // For each list of elements...
+            foreach (uint[] elements in keyEncodedColumn)
+            {
+                // Creates a list of u-integers.
+                List<uint> oneHotEncodedElement = new List<uint>();
+
+                // For each element in the elements...
+                foreach (uint element in elements)
+                {
+                    // Adds element to list.
+                    oneHotEncodedElement.Add(element);
+                }
+                // Adds list of elements to list.
+                oneHotEncodedElements.Add(oneHotEncodedElement);
+            }
+
+            #endregion
+
+            #region Combine word embeddings and one hot encoding
+
+            Dictionary<TitleFeatures, List<uint>> titlesAndGenresEncoded = new Dictionary<TitleFeatures, List<uint>>();
+
+            var predictionsAndElements = predictionsList.Zip(oneHotEncodedElements, (p, e) => new { Prediction = p, Element = e });
+
+            foreach (var item in predictionsAndElements)
+            {
+                titlesAndGenresEncoded.Add(item.Prediction, item.Element);
+            }
+
+            #endregion
+
+            #region K-Means
+
+            Console.WriteLine("K-Means");
+
+            #region Clustering
+
+            // Creates the machine learning context.
+            mlContext = new MLContext();
+
+            // Creates an IEnumerable of lists of floats.
+            ratingsPerUserAndGenreToClass = ratingsPerUserAndGenre.Select(s => s.Value.Select(x => x.Value).ToList());
+
+            // Creates the IDataView of the dataset.
+            trainingData = mlContext.Data.LoadFromEnumerable(dataSet);
+
+            // Get the column names
+            propertyNames = typeof(AverageRatingPerGenre).GetProperties().Select(x => x.Name).ToArray();
+
+            // Choose a number of clusters.
+            numberOfClusters = 3;
+
+            #endregion
+
+            #region Training
+
+            // Initialize the k-means trainer
+            kMeansTrainer = mlContext.Transforms.Concatenate("Features", propertyNames)
+                                                    .Append(mlContext.Clustering.Trainers
+                                                    .KMeans("Features", numberOfClusters: numberOfClusters));
+
+            // Train the model
+            trainedAverageRatingsModel = kMeansTrainer.Fit(trainingData);
+
+            // Run the model on the same data set
+            transformedAverageRatingsData = trainedAverageRatingsModel.Transform(trainingData);
 
             #endregion
 
             #region Prediction
 
-            #endregion
+            // Get the predictions
+            predictions = mlContext.Data.CreateEnumerable<Prediction>(transformedAverageRatingsData, false).ToList();
 
-            #endregion
-        }
+            // Creates a dictionary with key an integer and value a dictionary with key an integer and value a dictionary with key an integer and value a float.
+            allClustersAllUsersAndAllMoviesRatings = new Dictionary<int, Dictionary<int, Dictionary<int, float>>>();
 
-        private static void PrintDataColumn(IDataView transformedData,
-            string columnName)
-        {
-            var countSelectColumn = transformedData.GetColumn<float[]>(
-                transformedData.Schema[columnName]);
-
-            foreach (var row in countSelectColumn)
+            // For each one of the clusters...
+            for (int cluster = 1; cluster <= numberOfClusters; cluster++)
             {
-                for (var i = 0; i < row.Length; i++)
-                    Console.Write($"{row[i]}\t");
+                Console.WriteLine("Cluster No. " + cluster);
 
-                Console.WriteLine();
+                // Every respond of the current cluster.
+                var respondForCluster = predictions.Where(w => w.PredictedLabel == cluster);
+
+                // Creates list of integers.
+                var usersOfACluster = new List<int>();
+
+                // For each item in the respond of the current cluster...
+                foreach (var item in respondForCluster)
+                {
+                    // Takes the index of an item.
+                    var index = predictions.IndexOf(item);
+
+                    // Finds the user with the specific index.
+                    var indexOfUser = allDifferentUsersListResponse.ElementAt(index);
+
+                    // Gets the user ID by adding 1 to the index we got.
+                    var userId = indexOfUser + 1;
+
+                    // Adds the users to the users of the current cluster list.
+                    usersOfACluster.Add(userId);
+                }
+
+                // Creates a dictionary with key an integer and value a dictionary with key an integer and value a float.
+                var allUsersAndAllMoviesRatings = new Dictionary<int, Dictionary<int, float>>();
+
+                // Creates a list of integers.
+                var movieIdsAlreadyCalculated = new List<int>();
+
+                // For each user in users of a cluster...
+                foreach (var user in usersOfACluster)
+                {
+                    // Gets all the movies that the user has rated.
+                    var moviesOfAUser = await elasticSearchClient.SearchAsync<Ratings>(x => x
+                                                                 .Query(y => y
+                                                                 .Match(m => m
+                                                                 .Field(f => f
+                                                                 .userId)
+                                                                 .Query(user
+                                                                 .ToString())))
+                                                                 .Index(ratingsIndexName)
+                                                                 .Size(10000));
+
+                    // Creates a list with all the movie IDs of a user.
+                    var moviesOfAUserList = moviesOfAUser.Documents.Select(s => s.movieId).ToList();
+
+                    // Creates a dictionary with key an integer and value a float.
+                    var allMoviesRatings = new Dictionary<int, float>();
+
+                    // For each movie...
+                    foreach (var movie in allDifferentMoviesListResponse)
+                    {
+                        // If the user has NOT already rated this movie...
+                        if (!moviesOfAUserList.Contains(movie) && !movieIdsAlreadyCalculated.Contains(movie))
+                        {
+                            // Gets the movie rating.
+                            var ratingOfOthersOfCluster = await elasticSearchClient.SearchAsync<Ratings>(x => x
+                                                                                   .Source(s => s
+                                                                                   .Includes(i => i
+                                                                                   .Fields(f => f
+                                                                                   .rating)))
+                                                                                   .Query(y => y
+                                                                                   .Bool(b => b
+                                                                                   .Filter(fil => fil
+                                                                                   .Terms(m => m
+                                                                                   .Field(g => g
+                                                                                   .userId)
+                                                                                   .Terms(usersOfACluster)), fil => fil
+                                                                                   .Terms(m => m
+                                                                                   .Field(g => g
+                                                                                   .movieId)
+                                                                                   .Terms(movie)))))
+                                                                                   .Index(ratingsIndexName)
+                                                                                   .Size(10000));
+
+                            // Adds to the dictionary movie ID as the key and the average of ratings of other users of the same cluster as a value.
+                            allMoviesRatings.Add(movie, ratingOfOthersOfCluster.Documents.Count == 0 ? 0 : ratingOfOthersOfCluster.Documents.Select(s => s.rating).Average());
+
+                            // Adds the movie ID to the list of movies that have already been calculated.
+                            movieIdsAlreadyCalculated.Add(movie);
+                        }
+                    }
+                    // Adds to the dictionary user ID as the key and the dictionary of average of ratings of other users of the same cluster as a value.
+                    allUsersAndAllMoviesRatings.Add(user, allMoviesRatings);
+                }
+                // Adds to the dictionary cluster as the key and the dictionary of all users, all movies and average ratings as a value.
+                allClustersAllUsersAndAllMoviesRatings.Add(cluster, allUsersAndAllMoviesRatings);
             }
+
+            #endregion
+
+            #endregion
+
+            #endregion
+
         }
     }
 }
