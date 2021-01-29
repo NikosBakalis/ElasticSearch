@@ -242,9 +242,6 @@ namespace ElasticSearch
                 Console.WriteLine(item);
             }
 
-            // Empty line.
-            Console.WriteLine();
-
             #endregion
 
             #region All Different Users
@@ -358,7 +355,7 @@ namespace ElasticSearch
 
             #region K-Means
 
-            Console.WriteLine("K-Means");
+            Console.WriteLine("\nK-Means");
 
             #region Clustering
 
